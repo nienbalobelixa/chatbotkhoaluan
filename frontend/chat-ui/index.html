@@ -1,0 +1,62 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Chatbot - Khóa Luận</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        #chat-container { width: 400px; height: 500px; background: white; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        #chat-box { flex: 1; padding: 20px; overflow-y: auto; border-bottom: 1px solid #eee; }
+        .msg { margin-bottom: 10px; padding: 10px; border-radius: 8px; max-width: 80%; }
+        .user { background: #007bff; color: white; align-self: flex-end; margin-left: auto; }
+        .bot { background: #e9ecef; color: #333; }
+        #input-area { display: flex; padding: 10px; }
+        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; outline: none; }
+        button { padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 5px; margin-left: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <h3 style="text-align: center; color: #333;">HR Assistant</h3>
+    <div id="chat-box"></div>
+    <div id="input-area">
+        <input type="text" id="user-input" placeholder="Nhập câu hỏi về nhân sự...">
+        <button onclick="askBot()">Gửi</button>
+    </div>
+</div>
+
+<script>
+    async function askBot() {
+        const inputField = document.getElementById('user-input');
+        const chatBox = document.getElementById('chat-box');
+        const question = inputField.value;
+        if (!question) return;
+
+        // Hiển thị câu hỏi của người dùng
+        chatBox.innerHTML += `<div class="msg user">${question}</div>`;
+        inputField.value = '';
+
+        try {
+            // GỌI ĐẾN BACKEND FASTAPI
+            const response = await fetch('http://127.0.0.1:8000/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: question })
+            });
+
+            const data = await response.json();
+            
+            // Hiển thị câu trả lời của Bot
+            chatBox.innerHTML += `<div class="msg bot">${data.answer}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        } catch (error) {
+            chatBox.innerHTML += `<div class="msg bot" style="color:red">Lỗi: Không kết nối được Backend!</div>`;
+        }
+    }
+</script>
+
+</body>
+</html>
