@@ -36,7 +36,11 @@ dependencies:
   path: ^1.9.0
   flutter_markdown: ^0.6.18+1
   file_picker: ^10.3.10
-
+  speech_to_text: ^7.3.0
+  uuid: ^4.5.3
+  flutter_tts: ^4.2.5
+  url_launcher: ^6.3.2  # <--- THÊM DÒNG NÀY VÀO ĐÂY
+  fl_chart: ^1.2.0
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,0 @@
-Sản phẩm chính gồm:
-1. Hệ thống chatbot nội bộ
-2. Hệ thống quản lý nhân sự
-3. AI phân tích dữ liệu

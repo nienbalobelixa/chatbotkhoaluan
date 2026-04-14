@@ -1,18 +1,19 @@
 import os
 import shutil
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # ==============================
-# 📂 CONFIG
+# 📂 PATH CHUẨN (ANTI LỖI WINDOWS)
 # ==============================
-DOCS_PATH = "documents"
-DB_PATH = "vector_db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DOCS_PATH = os.path.join(BASE_DIR, "documents")
+DB_PATH = os.path.join(BASE_DIR, "vector_db")
 
 # ==============================
-# 🧠 EMBEDDING MODEL (ĐỒNG BỘ VỚI RAG)
+# 🧠 EMBEDDING
 # ==============================
 embedding = HuggingFaceEmbeddings(
     model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
@@ -20,81 +21,89 @@ embedding = HuggingFaceEmbeddings(
 )
 
 # ==============================
-# 🔥 LOAD FILE PDF
+# 📥 LOAD PDF & CLEAN METADATA
 # ==============================
 def load_documents():
     if not os.path.exists(DOCS_PATH):
-        print(f"❌ Không tìm thấy thư mục {DOCS_PATH}")
+        print(f"❌ Không tìm thấy thư mục: {DOCS_PATH}")
         return []
 
+    print(f"📂 Đang quét file tại: {DOCS_PATH}")
+    
     loader = DirectoryLoader(
         DOCS_PATH,
-        glob="**/*.pdf",   # 🔥 FIX: load toàn bộ file con
+        glob="*.pdf",
         loader_cls=PyPDFLoader
     )
 
     documents = loader.load()
-    print(f"📄 Đã load {len(documents)} trang từ PDF")
+
+    # --- BƯỚC QUAN TRỌNG: FIX METADATA CHO PHÂN QUYỀN ---
+    for doc in documents:
+        # Lấy đường dẫn gốc (thường là đường dẫn dài loằng ngoằng)
+        original_path = doc.metadata.get("source", "")
+        # Chỉ lấy tên file cuối cùng (ví dụ: noiquy.pdf)
+        clean_filename = os.path.basename(original_path)
+        # Ghi đè lại vào metadata
+        doc.metadata["source"] = clean_filename
+
+    print(f"📄 Load được {len(documents)} trang từ PDF")
     return documents
 
 
 # ==============================
-# ✂️ CHIA NHỎ TEXT
+# ✂️ SPLIT TEXT
 # ==============================
 def split_text(documents):
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
+    # Tăng chunk_size lên 600 để nội dung đầy đủ hơn cho Gemini
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=600,
         chunk_overlap=100
     )
 
-    docs = text_splitter.split_documents(documents)
-    print(f"✂️ Đã chia thành {len(docs)} chunks")
-    return docs
+    chunks = splitter.split_documents(documents)
+    print(f"✂️ Đã tạo {len(chunks)} đoạn văn bản nhỏ (chunks)")
+    return chunks
 
 
 # ==============================
-# 🧹 XOÁ DB CŨ (TRÁNH LỖI CACHE)
+# 💾 SAVE DB (XÓA CŨ - TẠO MỚI)
 # ==============================
-def clear_db():
+def save_db(chunks):
+    # Xóa DB cũ trước khi lưu mới để tránh trùng lặp hoặc rác dữ liệu
     if os.path.exists(DB_PATH):
-        print("🗑 Đang xoá DB cũ...")
+        print("🗑 Xoá DB cũ để cập nhật phân quyền...")
         shutil.rmtree(DB_PATH)
 
-
-# ==============================
-# 💾 LƯU VECTOR DB
-# ==============================
-def save_to_db(docs):
     db = Chroma.from_documents(
-        documents=docs,
+        documents=chunks,
         embedding=embedding,
         persist_directory=DB_PATH
     )
-
-    print("💾 Đã lưu vào vector_db")
-    print(f"📊 Tổng chunks: {len(docs)}")
+    
+    # Ở phiên bản langchain_chroma mới, dữ liệu tự động lưu.
+    print(f"💾 Đã lưu Vector DB thành công tại: {DB_PATH}")
 
 
 # ==============================
 # 🚀 MAIN
 # ==============================
 def main():
-    print("🚀 BẮT ĐẦU INGEST DATA...\n")
+    print("\n🚀 BẮT ĐẦU QUÁ TRÌNH NẠP DỮ LIỆU (INGEST)...\n")
 
-    documents = load_documents()
-
-    if not documents:
-        print("❌ Không có tài liệu để xử lý")
+    # 1. Load file
+    docs = load_documents()
+    if not docs:
+        print("❌ Không tìm thấy dữ liệu PDF nào!")
         return
 
-    docs = split_text(documents)
+    # 2. Cắt nhỏ
+    chunks = split_text(docs)
 
-    # 🔥 FIX QUAN TRỌNG: luôn clear DB để tránh lỗi dữ liệu cũ
-    clear_db()
+    # 3. Lưu vào Chroma
+    save_db(chunks)
 
-    save_to_db(docs)
-
-    print("\n✅ INGEST HOÀN TẤT!")
+    print("\n✅ HOÀN TẤT! Bây giờ hãy cập nhật bảng document_permissions trong SQLite nhé Niên.")
 
 
 if __name__ == "__main__":

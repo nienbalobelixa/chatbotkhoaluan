@@ -1,4 +1,0 @@
-Quy trình nghỉ phép gồm 3 bước:
-1. Nộp đơn xin nghỉ.
-2. Quản lý phê duyệt.
-3. Phòng nhân sự cập nhật hệ thống.
