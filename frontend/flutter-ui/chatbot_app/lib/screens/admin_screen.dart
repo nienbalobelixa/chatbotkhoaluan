@@ -15,7 +15,7 @@ class AdminScreen extends StatefulWidget {
 
 class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final String baseUrl = "http://127.0.0.1:8000"; // Nhớ đổi IP LAN nếu chạy trên điện thoại thật
+  final String baseUrl = "https://chatbot-backend-qjw8.onrender.com"; // Nhớ đổi IP LAN nếu chạy trên điện thoại thật
 
   Map<String, dynamic> stats = {"total_messages_today": 0, "unanswered_count": 0, "top_docs": [],
   "last_7_days": [] // <-- THÊM MỤC NÀY

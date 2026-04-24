@@ -11,7 +11,7 @@ class AdminDocsScreen extends StatefulWidget {
 class _AdminDocsScreenState extends State<AdminDocsScreen> {
   List<dynamic> docs = [];
   bool isLoading = false;
-  final String baseUrl = "http://127.0.0.1:8000";
+  final String baseUrl = "https://chatbot-backend-qjw8.onrender.com";
 
   @override
   void initState() {

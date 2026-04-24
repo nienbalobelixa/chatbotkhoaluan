@@ -1,49 +1,72 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/login_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/admin_docs_screen.dart';
 import 'screens/admin_screen.dart'; 
 
-void main() {
-  runApp(KnowledgeApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load saved session data
+  final prefs = await SharedPreferences.getInstance();
+  final savedUsername = prefs.getString('username');
+  final savedRole = prefs.getString('role');
+  final savedIsOnboarded = prefs.getBool('is_onboarded') ?? false;
+  
+  runApp(KnowledgeApp(
+    savedUsername: savedUsername,
+    savedRole: savedRole,
+    savedIsOnboarded: savedIsOnboarded,
+  ));
 }
 
 class KnowledgeApp extends StatelessWidget {
+  final String? savedUsername;
+  final String? savedRole;
+  final bool savedIsOnboarded;
+
+  const KnowledgeApp({
+    this.savedUsername,
+    this.savedRole,
+    this.savedIsOnboarded = false,
+  });
+
   @override
   Widget build(BuildContext context) {
+    // Determine initial route based on saved session
+    String initialRoute = '/login';
+    if (savedUsername != null && savedUsername!.isNotEmpty) {
+      initialRoute = '/chat';
+    }
+
     return MaterialApp(
       title: 'ABC TECH AI',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(), 
-
-      // Nếu bạn để '/' là trang chủ, nên có định nghĩa trong routes bên dưới
-      initialRoute: '/login', 
-
-      // Dùng onGenerateRoute để bóc tách dữ liệu khi chuyển trang
+      initialRoute: initialRoute,
       onGenerateRoute: (settings) {
         if (settings.name == '/chat') {
-          // KHI LOGIN CHUYỂN SANG: Đổi Map<String, String> thành Map<String, dynamic>
-          final args = settings.arguments as Map<String, dynamic>? ?? {
-            "username": "Guest",
-            "role": "staff",
-            "isOnboarded": false // Giá trị mặc định nếu không có
-          };
+          // Get arguments or use saved data
+          final args = settings.arguments as Map<String, dynamic>?;
+          
+          final username = args?["username"] ?? savedUsername ?? "Guest";
+          final role = args?["role"] ?? savedRole ?? "staff";
+          final isOnboarded = args?["isOnboarded"] ?? savedIsOnboarded;
 
           return MaterialPageRoute(
             builder: (context) => ChatScreen(
-              username: args["username"].toString(), // Chắc chắn nó là chữ
-              role: args["role"].toString(),
-              isOnboarded: args["isOnboarded"] as bool?, // BẮT VÀ TRUYỀN BIẾN MỚI VÀO ĐÂY
+              username: username.toString(),
+              role: role.toString(),
+              isOnboarded: isOnboarded as bool,
             ),
           );
         }
         
-        // Các route khác không cần tham số
         return null; 
       },
-
       routes: {
-        '/': (context) => LoginScreen(), // Định nghĩa route gốc để không bị lỗi màn hình đen
+        '/': (context) => LoginScreen(),
         '/login': (context) => LoginScreen(),
         '/admin': (context) => AdminScreen(),
         '/admin_docs': (context) => AdminDocsScreen(),

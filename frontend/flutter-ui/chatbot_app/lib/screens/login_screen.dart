@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 // Nhớ import ChatScreen của bạn vào đây
@@ -17,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   
-  final String baseUrl = "http://127.0.0.1:8000"; 
+  final String baseUrl = "https://chatbot-backend-qjw8.onrender.com"; 
   
   bool _isLogin = true; // True: Đăng nhập | False: Đăng ký
   bool _isLoading = false;
@@ -48,9 +49,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (res.statusCode == 200 && data['status'] == 'success') {
         if (_isLogin) {
-          // ĐĂNG NHẬP THÀNH CÔNG -> Chuyển sang màn hình Chat
+          // ĐĂNG NHẬP THÀNH CÔNG -> Lưu thông tin và chuyển sang màn hình Chat
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? "Đăng nhập thành công!", style: const TextStyle(color: Colors.white)), backgroundColor: Colors.green));
           
+          // Save credentials to SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('username', data['username'] ?? '');
+          await prefs.setString('role', data['role'] ?? 'staff');
+          await prefs.setBool('is_onboarded', data['is_onboarded'] ?? false);
+          
+          // Navigate to ChatScreen
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(

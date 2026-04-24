@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static String baseUrl = "http://127.0.0.1:8000"; // Android
+  static const String baseUrl = "https://chatbot-backend-qjw8.onrender.com"; // Chạy thật trên Render
+  // static const String baseUrl = "http://127.0.0.1:8000"; // Khi nào test Local thì mở cmt dòng này, đóng dòng trên
 
   static String? token;
 

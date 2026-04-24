@@ -4,7 +4,7 @@ import 'dart:convert';
 
 class OnboardingChatWidget extends StatefulWidget {
   final String userId;
-  final Function(String) onAskAI; // Hàm này sẽ kích hoạt chat
+  final Function(String) onAskAI; 
   
   const OnboardingChatWidget({
     Key? key, 
@@ -21,25 +21,25 @@ class _OnboardingChatWidgetState extends State<OnboardingChatWidget> {
   bool isLoading = true;
   bool isCompleted = false;
 
+  final String apiBaseUrl = "https://chatbot-backend-qjw8.onrender.com/api";
+
   @override
   void initState() {
     super.initState();
-    _fetchOnboardingTask();
+    // Vừa vào là hỏi thẳng Backend (Supabase) xem trạng thái thế nào
+    _fetchOnboardingStatus();
   }
 
-  Future<void> _fetchOnboardingTask() async {
-    final url = Uri.parse('http://127.0.0.1:8000/api/onboarding/${widget.userId}'); 
-    
-    print("🌐 Đang gọi API Onboarding: $url"); // <-- Gắn máy nghe lén số 1
+  // 🚀 LẤY TRẠNG THÁI TỪ SUPABASE QUA BACKEND
+  Future<void> _fetchOnboardingStatus() async {
+    final url = Uri.parse('$apiBaseUrl/onboarding/${widget.userId}'); 
     
     try {
       final response = await http.get(url);
-      
-      print("📦 Kết quả Backend trả về: ${response.body}"); // <-- Gắn máy nghe lén số 2
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
+          // Nếu Backend báo 'completed', isCompleted = true sẽ làm Widget biến mất
           if (data['status'] == 'completed') {
             isCompleted = true;
           } else {
@@ -49,25 +49,40 @@ class _OnboardingChatWidgetState extends State<OnboardingChatWidget> {
         });
       }
     } catch (e) {
-      print("❌ Lỗi mạng: $e");
-      setState(() => isLoading = false);
+      print("❌ Lỗi kết nối Supabase: $e");
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
+  // 🚀 CẬP NHẬT TRẠNG THÁI HOÀN THÀNH LÊN SUPABASE
   Future<void> _markAsCompleted(int day) async {
-    final url = Uri.parse('http://127.0.0.1:8000/api/onboarding/${widget.userId}/complete?day=$day');
+    setState(() => isLoading = true);
+
+    final url = Uri.parse('$apiBaseUrl/onboarding/${widget.userId}/complete?day=$day');
     try {
       final response = await http.post(url);
       if (response.statusCode == 200) {
-        _fetchOnboardingTask(); // Gọi lại để lấy nhiệm vụ ngày tiếp theo hoặc ẩn đi
+        // Sau khi báo thành công, tải lại để kiểm tra xem đã xong hết 3 ngày chưa
+        _fetchOnboardingStatus(); 
+      } else {
+        if (mounted) setState(() => isLoading = false);
       }
-    } catch (e) {}
+    } catch (e) {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) return const Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator());
+    // Nếu Supabase xác nhận đã xong hoặc không có nhiệm vụ, ẩn Widget ngay
     if (isCompleted || currentTask == null) return const SizedBox.shrink();
+    
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.all(20), 
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2))
+      );
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
@@ -80,13 +95,11 @@ class _OnboardingChatWidgetState extends State<OnboardingChatWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          
-          // 1. DÒNG TIÊU ĐỀ
           Row(
             children: [
               const Icon(Icons.school, color: Colors.blue),
               const SizedBox(width: 8),
-              Expanded( // Dùng Expanded để chữ dài tự xuống dòng, không bị tràn
+              Expanded( 
                 child: Text(
                   "Nhiệm vụ ngày ${currentTask!['day']}: ${currentTask!['title']}",
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
@@ -95,24 +108,18 @@ class _OnboardingChatWidgetState extends State<OnboardingChatWidget> {
             ],
           ),
           const SizedBox(height: 10),
-          
-          // 2. NỘI DUNG NHIỆM VỤ
           Text(
             currentTask!['message'], 
             style: const TextStyle(color: Colors.black87, fontSize: 14, height: 1.5)
           ),
           const SizedBox(height: 15),
-          
-          // 3. CỤM NÚT BẤM (Dùng Wrap chống tràn viền trên Mobile)
           Align(
             alignment: Alignment.centerRight,
             child: Wrap(
-              spacing: 10, // Khoảng cách ngang giữa 2 nút
-              runSpacing: 10, // Khoảng cách dọc nếu bị đẩy xuống dòng
+              spacing: 10,
+              runSpacing: 10,
               alignment: WrapAlignment.end,
               children: [
-                
-                // Nút Hỏi AI
                 OutlinedButton.icon(
                   icon: const Icon(Icons.auto_awesome, color: Colors.blue, size: 18),
                   label: const Text("Hỏi AI bài này"),
@@ -121,12 +128,8 @@ class _OnboardingChatWidgetState extends State<OnboardingChatWidget> {
                     side: const BorderSide(color: Colors.blue),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  onPressed: () {
-                    widget.onAskAI(currentTask!['suggested_prompt']);
-                  },
+                  onPressed: () => widget.onAskAI(currentTask!['suggested_prompt']),
                 ),
-                
-                // Nút Đã Nắm Rõ
                 ElevatedButton.icon(
                   icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
                   label: const Text("Đã Nắm Rõ"),
@@ -138,7 +141,6 @@ class _OnboardingChatWidgetState extends State<OnboardingChatWidget> {
                   ),
                   onPressed: () => _markAsCompleted(currentTask!['day']),
                 ),
-                
               ],
             ),
           )

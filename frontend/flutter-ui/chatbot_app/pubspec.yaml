@@ -41,6 +41,7 @@ dependencies:
   flutter_tts: ^4.2.5
   url_launcher: ^6.3.2  # <--- THÊM DÒNG NÀY VÀO ĐÂY
   fl_chart: ^1.2.0
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
